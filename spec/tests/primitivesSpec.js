@@ -2,6 +2,27 @@ var core = require('../../src/core.js');
 var parser = require('../../src/parser.js');
 var nil = parser.nil;
 
+describe('primitives.Environment', function() {
+  it('has the js/ namespace', function() {
+    var testString = '(js/parseInt "23")';
+    var result = core.readEval(testString);
+
+    expect(typeof result).toBe('number');
+    expect(result).toBe(23);
+  });
+});
+
+describe('primitives.JSRequire', function() {
+  it('allows us to import javascript modules', function() {
+    var testString = '(do (js-require "os") os/EOL)';
+
+    expect(typeof core.readEval(testString)).toBe('string');
+  });
+
+  it('allows us to alias modules', function() {
+  });
+});
+
 describe('primitives.PlusOperator', function() {
   it('can add two numbers', function() {
     var testString = '(+ 40 2)';
@@ -67,6 +88,18 @@ describe('primitives.Let', function() {
     var testString = '(let (k 2) (+ 3 3) (+ k k))';
 
     expect(core.readEval(testString)).toBe(4);
+  });
+
+  it('gives precedence to inner binds', function() {
+    var testString = '(let (k 2) (let (k  42) k))';
+
+    expect(core.readEval(testString)).toBe(42);
+  });
+
+  it('doesn\'t leak binds', function() {
+    var testString = '(let (k 42) (let (k 41) k) k)';
+
+    expect(core.readEval(testString)).toBe(42);
   });
 });
 
@@ -134,3 +167,69 @@ describe('primitives.If', function() {
     expect(test2).not.toThrow();
   });
 });
+
+describe('primitives.Lambda', function() {
+  it('allows us to define anonymous functions', function() {
+    var testString = '(let (f (λ (a b c) (+ a (+ b c)))) ' +
+       '(+ (f 1 2 3) (f 0 1 1)))';
+
+    expect(core.readEval(testString)).toBe(8);
+  });
+
+  it('forms a closure', function() {
+    var testString = '((let (x 42) (let (f (λ () x)) f)))';
+    
+    expect(core.readEval(testString)).toBe(42);
+  });
+});
+
+describe('primitives.Def', function() {
+  it('can bind names in the current env', function() {
+    var testString = '(do (def x 40) (+ x 2))';
+    expect(core.readEval(testString)).toBe(42);
+  });
+
+  it('can rebind names', function() {
+    var testString = '(do (def x 40) (def x 5) (+ x 2))';
+    expect(core.readEval(testString)).toBe(7);
+  });
+
+  it('is not contained by scope', function() {
+    var testString = '(do (let (x 42) (def x 29)) x)';
+
+    expect(core.readEval(testString)).toBe(29);
+  });
+
+  it('is trumped by let binds', function() {
+    var testString = '(do (def x 42) (let (x 21) x))';
+
+    expect(core.readEval(testString)).toBe(21);
+  });
+});
+
+describe('primitives.Quote', function() {
+  it('does not evaluate its contents', function() {
+    var testString = '(quote 42)';
+
+    expect(core.readEval(testString) instanceof parser.Literal).toBe(true);
+  });
+
+  it('works with lists too', function() {
+    var testString = '(quote (1 2 3))';
+    var result = core.readEval(testString);
+
+    expect(result instanceof parser.LinkedList).toBe(true);
+    expect(result.length).toBe(3);
+    expect(result.equals(['1', '2', '3'])).toBe(true);
+  });
+});
+
+/*
+describe('primitives.Macro', function() {
+  it('is a macro, lol', function() {
+    var testString = '(do (def defλ (macro (name binds body) (list ' +
+      '(quote def) name (list (quote λ) binds body)))) (macroexpand (quote'
+    var testString = '(let (m (macro (name binds
+  })
+})
+*/

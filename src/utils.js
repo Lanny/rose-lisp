@@ -13,16 +13,21 @@
   };
 
   module.exports.subclass = function(superClass, constructor, methods) {
-    var Klass = function() {
-      if (constructor === null) {
-        superClass.constructor.apply(this, arguments);
-      } else {
+    var Klass;
+   
+    if (constructor === null) {
+      var oldConstructor = superClass.constructor;
+      Klass = function() {
+        oldConstructor.apply(this, arguments);
+      };
+    } else {
+      Klass = function() {
         constructor.apply(this, arguments);
-      }
-    };
+      };
+    }
 
     Klass.prototype = superClass;
-    Klass.constructor = Klass;
+    Klass.prototype.constructor = Klass;
 
     for (var meth in methods) {
       Klass.prototype[meth] = methods[meth];

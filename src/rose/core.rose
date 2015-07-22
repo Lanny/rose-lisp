@@ -1,0 +1,19 @@
+(def defmacro
+  (macro (name binds body)
+    (list
+      (quote def)
+      name
+      (list
+        (quote macro)
+        binds
+        body))))
+
+
+(defmacro defλ (name binds body)
+  (list
+    (quote def)
+    name
+    (list
+      (quote λ)
+      binds
+      body)))

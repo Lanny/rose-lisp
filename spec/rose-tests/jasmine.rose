@@ -1,0 +1,5 @@
+(js-require "jasmine")
+
+(define describe
+  (lambda 
+  

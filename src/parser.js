@@ -95,8 +95,8 @@
       }
 
       var s = this.reduce(function(acc, item) {
-        return acc + utils.repr(item);
-      }, '(');
+        return acc + utils.repr(item) + ' ';
+      }, '( ');
 
       return s + ')';
     },
@@ -122,6 +122,24 @@
       }
 
       return runningLL.car();
+    },
+    lastCell: function() {
+      if (this.isNil()) {
+        return this;
+      }
+
+      var runner = this;
+      while (runner.length !== 1) {
+        runner = runner.cdr();
+      }
+
+      return runner;
+    },
+    last: function() {
+      return this.lastCell.car();
+    },
+    isNil: function() {
+      return this.length === 0;
     },
     _divineEquality: function(left, right) {
       if (left instanceof Object && typeof left.equals === 'function') {
@@ -187,6 +205,8 @@
       return runner;
     },
     toString: function(indent) {
+      return 'AST' + this._children.toString();
+      /*
       indent = indent || 0;
       var s = Array(indent * 2 + 1).join(' ') + this._children.car().text + '\n';
 
@@ -201,6 +221,7 @@
       });
 
       return s;
+      */
     },
     toArray: function() {
       var arr = [];
@@ -226,6 +247,16 @@
 
       return this;
     },
+    listify: function() {
+      // also flips implicity
+      return this._children.map(function(node) {
+        if (node instanceof AST) {
+          return node.listify();
+        } else {
+          return node;
+        }
+      });
+    },
     addChild: function(child) {
       this._children = this._children.cons(child);
 
@@ -245,27 +276,30 @@
     }
   };
 
-  var Token = function(text, lineNo, colNo) {
-    this.text = text;
-    this.lineNo = lineNo;
-    this.colNo = colNo;
-  };
-
-  Token.prototype = {
-    equals: function(that) {
-      if (typeof that === 'string') {
-        return this.text === that;
-      } else if (that instanceof Token) {
-        return this.text === that.text;
-      } else {
-        return false;
+  var Token = utils.subclass(
+    {},
+    function(text, lineNo, colNo) {
+      this.text = text;
+      this.lineNo = lineNo;
+      this.colNo = colNo;
+    },
+    {
+      toString: function() {
+        return 'T<' + this.text + '>';
+      },
+      equals: function(that) {
+        if (typeof that === 'string') {
+          return this.text === that;
+        } else if (that instanceof Token) {
+          return this.text === that.text;
+        } else {
+          return false;
+        }
       }
-    }
-  };
+    });
 
   var Symbol = function(text, lineNo, colNo) {
     Token.call(this, text, lineNo, colNo);
-    this.lol = "foo";
   };
   Symbol.prototype = new Token();
   Symbol.prototype.constructor = Symbol;
@@ -299,6 +333,15 @@
       this._value = this.unescapeString(unwrapped);
     },
     {
+      equals: function(that) {
+        if (that instanceof StringLiteral) {
+          return this.value() === that.value();
+        } else if (typeof that === 'string') {
+          return this.value() === that;
+        } else {
+          return false;
+        }
+      },
       value: function() {
         return this._value;
       },
@@ -449,6 +492,8 @@
         curChar = input.charAt(++idx);
       }
 
+      idx++;
+
       var str = new StringLiteral(input.substring(this._curIdx, idx));
 
       return new Lexer(input, idx, this._syms.cons(str));
@@ -495,7 +540,7 @@
   var parse = function(input) {
     return new Parser(lex(input))
       .parse()
-      .flip();
+      .listify();
   };
 
   module.exports.LinkedList = LinkedList;

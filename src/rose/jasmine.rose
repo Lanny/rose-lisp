@@ -1,0 +1,15 @@
+(consult "core")
+(js-require "jasmine")
+
+(core/defmacro describe (description body)
+  (list
+    (quote jasmine/describe)
+    description
+    (list
+      (quote λ)
+      (quote ())
+      (list
+        (quote do)
+        body))))
+
+(print (macroexpand (quote (describe "a rose lambda" (+ 1 1)))))

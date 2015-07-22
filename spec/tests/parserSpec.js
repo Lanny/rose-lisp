@@ -1,4 +1,5 @@
 var parser = require('../../src/parser.js');
+var utils = require('../../src/utils.js');
 
 var llEquals = function(expected) {
   return {
@@ -165,12 +166,19 @@ describe('parser.Literal', function() {
   });
 });
 
-describe('parser.Token', function() {
-  it('has its equality method consulted by child classes', function() {
-    var lit = new parser.Literal('42');
-    var sym = new parser.Symbol('42');
+describe('parser.StringLiteral', function() {
+  it('equates to other StringLiterals', function() {
+    var sl1 = new parser.StringLiteral('"the quick brown fox"');
+    var sl2 = new parser.StringLiteral('"k"');
 
-    expect(lit.equals(sym)).toBe(true);
+    sl2._value = 'the quick brown fox';
+
+    expect(sl1.equals(sl2)).toBe(true);
+  });
+
+  it('equates to strings', function() {
+    var sl1 = new parser.StringLiteral('"the quick brown fox"');
+    expect(sl1.equals('the quick brown fox')).toBe(true);
   });
 });
 
@@ -230,10 +238,10 @@ describe('parser.Lexer', function() {
   it('lexes strings correctly', function() {
     var test = '(let (foo "the quick brown fox") foo)';
     var syms = parser.lex(test);
-    var str = new parser.StringLiteral('the quick brown fox');
+    var str = 'the quick brown fox';
 
-    expect(syms).toEqual(llEquals(['(', 'let', '(', 'foo', '21', ')', str,
-      ')', 'foo', ')']));
+    expect(syms).toEqual(llEquals(['(', 'let', '(', 'foo', str, ')', 'foo',
+      ')']));
   });
 });
 
@@ -269,23 +277,22 @@ describe('parser.Parser', function() {
     var expected1 = ['+', '1', '1'];
     var expected2 = ['/', '12', '32'];
 
-    expect(ast1).toEqual(astEquals(expected1));
-    expect(ast2).toEqual(astEquals(expected2));
+    expect(ast1).toEqual(llEquals(expected1));
+    expect(ast2).toEqual(llEquals(expected2));
 
-    expect(ast1).not.toEqual(astEquals(expected2));
-    expect(ast2).not.toEqual(astEquals(expected1));
+    expect(ast1).not.toEqual(llEquals(expected2));
+    expect(ast2).not.toEqual(llEquals(expected1));
   });
 
   it('parses slightly harder cases', function() {
     var test1 = '(let (foo 21)\n\t(+ foo 21))';
-    var syms1 = parser.lex(test1);
-    var ast1 = new parser.Parser(syms1).parse().flip();
+    var ast1 = parser.parse(test1);
     var expected1 = [
       'let',
       ['foo', '21'],
       ['+', 'foo', '21']
     ];
 
-    expect(ast1).toEqual(astEquals(expected1));
+    expect(ast1).toEqual(llEquals(expected1));
   });
 });
